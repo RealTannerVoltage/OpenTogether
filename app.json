@@ -17,7 +17,15 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.opentogether.app",
-      "schemes": ["opentogether"]
+      "schemes": ["opentogether"],
+      "infoPlist": {
+        "CFBundleURLTypes": [
+          {
+            "CFBundleURLSchemes": ["opentogether"],
+            "CFBundleURLName": "Auth"
+          }
+        ]
+      }
     },
     "android": {
       "adaptiveIcon": {
@@ -44,6 +52,14 @@
     },
     "web": {
       "favicon": "./assets/favicon.png"
+    },
+    "plugins": [
+      "expo-build-properties"
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "$EAS_PROJECT_ID"
+      }
     }
   }
 }
