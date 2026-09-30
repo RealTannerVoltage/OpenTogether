@@ -25,12 +25,7 @@
     "production": {
       "distribution": "store",
       "android": {
-        "buildType": "app-bundle",
-        "keystore": {
-          "alias": "opentogether",
-          "keystorePassword": "$EAS_ANDROID_KEYSTORE_PASSWORD",
-          "keyPassword": "$EAS_ANDROID_KEY_PASSWORD"
-        }
+        "buildType": "app-bundle"
       },
       "ios": {
         "simulator": false
@@ -45,7 +40,6 @@
       },
       "ios": {
         "appleId": "$EAS_APPLE_ID",
-        "appleAppIdentifier": "com.opentogether.app",
         "ascAppId": "$EAS_ASC_APP_ID",
         "appleTeamId": "$EAS_APPLE_TEAM_ID"
       }
