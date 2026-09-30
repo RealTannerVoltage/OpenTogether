@@ -6,17 +6,11 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { AuthProvider } from './src/contexts/AuthContext';
 import { AppNavigator } from './src/navigation/AppNavigator';
 
-// MSAL Configuration
-import { PublicClientApplication } from '@azure/msal-browser';
-import { MSAL_CONFIG } from './src/config/auth';
-
-const msalInstance = new PublicClientApplication(MSAL_CONFIG);
-
 export default function App() {
   return (
     <GestureHandlerRootView style={styles.container}>
       <SafeAreaProvider>
-        <AuthProvider msalInstance={msalInstance}>
+        <AuthProvider>
           <AppNavigator />
           <StatusBar style="light" />
         </AuthProvider>

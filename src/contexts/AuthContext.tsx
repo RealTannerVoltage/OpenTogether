@@ -1,8 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
-import { PublicClientApplication, AccountInfo, AuthenticationResult } from '@azure/msal-browser';
-import * as SecureStore from 'expo-secure-store';
+import { minecraftAuth } from '../services/minecraftAuth';
 import { User, Session } from '../types';
-import { MICROSOFT_AUTH_CONFIG } from '../config/auth';
 
 interface AuthContextType {
   user: User | null;
@@ -14,145 +12,82 @@ interface AuthContextType {
   signOut: () => Promise<void>;
 }
 
-const STORAGE_KEYS = {
-  USER: 'opentogether_user',
-  SESSION: 'opentogether_session',
-};
-
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 interface AuthProviderProps {
   children: ReactNode;
-  msalInstance: PublicClientApplication;
 }
 
-export const AuthProvider: React.FC<AuthProviderProps> = ({ children, msalInstance }) => {
+export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const saveUser = useCallback(async (userData: User) => {
-    await SecureStore.setItemAsync(STORAGE_KEYS.USER, JSON.stringify(userData));
-    setUser(userData);
-  }, []);
-
-  const saveSession = useCallback(async (sessionData: Session) => {
-    await SecureStore.setItemAsync(STORAGE_KEYS.SESSION, JSON.stringify(sessionData));
-    setSession(sessionData);
-  }, []);
-
-  const clearAuth = useCallback(async () => {
-    await SecureStore.deleteItemAsync(STORAGE_KEYS.USER);
-    await SecureStore.deleteItemAsync(STORAGE_KEYS.SESSION);
-    setUser(null);
-    setSession(null);
-    await msalInstance.logoutRedirect();
-  }, [msalInstance]);
-
   const loadStoredAuth = useCallback(async () => {
     try {
-      const storedUser = await SecureStore.getItemAsync(STORAGE_KEYS.USER);
-      const storedSession = await SecureStore.getItemAsync(STORAGE_KEYS.SESSION);
+      setLoading(true);
+      setError(null);
+
+      // Initialize minecraft auth
+      await minecraftAuth.initialize();
+
+      // Load stored user and session
+      const storedUser = await minecraftAuth.getCurrentUser();
+      const storedSession = await minecraftAuth.getCurrentSession();
 
       if (storedUser) {
-        setUser(JSON.parse(storedUser));
+        setUser(storedUser);
       }
       if (storedSession) {
-        const sessionData: Session = JSON.parse(storedSession);
-        if (new Date(sessionData.expiresAt) > new Date()) {
-          setSession(sessionData);
-        } else {
-          await clearAuth();
-        }
+        setSession(storedSession);
       }
     } catch (err) {
       console.error('Failed to load stored auth:', err);
+      setError('Failed to initialize authentication');
     } finally {
       setLoading(false);
     }
-  }, [clearAuth]);
+  }, []);
 
   useEffect(() => {
     loadStoredAuth();
   }, [loadStoredAuth]);
-
-  // Initialize MSAL
-  useEffect(() => {
-    const initializeMsal = async () => {
-      try {
-        await msalInstance.initialize();
-        
-        // Check for active accounts
-        const accounts = msalInstance.getAllAccounts();
-        if (accounts.length > 0) {
-          const account = accounts[0];
-          const userData: User = {
-            id: account.localAccountId || account.homeAccountId || crypto.randomUUID(),
-            username: account.name || account.username || 'User',
-            email: account.username || '',
-            microsoftId: account.localAccountId || account.homeAccountId || '',
-          };
-
-          const sessionData: Session = {
-            user: userData,
-            token: '',
-            expiresAt: new Date(Date.now() + 3600000),
-          };
-
-          await saveUser(userData);
-          await saveSession(sessionData);
-        }
-      } catch (err) {
-        console.error('MSAL initialization error:', err);
-      }
-    };
-
-    initializeMsal();
-  }, [msalInstance, saveUser, saveSession]);
 
   const signInWithMicrosoft = useCallback(async () => {
     try {
       setError(null);
       setLoading(true);
 
-      const loginRequest = {
-        scopes: MICROSOFT_AUTH_CONFIG.scopes,
-        redirectUri: MICROSOFT_AUTH_CONFIG.redirectUri,
-      };
-
-      const authResult = await msalInstance.loginRedirect(loginRequest);
+      const result = await minecraftAuth.signInWithMicrosoft();
       
-      if (authResult.account) {
-        const account: AccountInfo = authResult.account;
-        
-        const userData: User = {
-          id: account.localAccountId || account.homeAccountId || crypto.randomUUID(),
-          username: account.name || account.username || 'User',
-          email: account.username || '',
-          microsoftId: account.localAccountId || account.homeAccountId || '',
-        };
-
-        const sessionData: Session = {
-          user: userData,
-          token: authResult.idToken || '',
-          expiresAt: new Date(Date.now() + 3600000),
-        };
-
-        await saveUser(userData);
-        await saveSession(sessionData);
+      if (result) {
+        setUser(result.user);
+        setSession(result.session);
       }
     } catch (err) {
       console.error('Microsoft sign in error:', err);
-      setError('Failed to sign in with Microsoft');
+      setError(err instanceof Error ? err.message : 'Failed to sign in with Microsoft');
     } finally {
       setLoading(false);
     }
-  }, [saveUser, saveSession]);
+  }, []);
 
   const signOut = useCallback(async () => {
-    await clearAuth();
-  }, [clearAuth]);
+    try {
+      setError(null);
+      setLoading(true);
+
+      await minecraftAuth.signOut();
+      setUser(null);
+      setSession(null);
+    } catch (err) {
+      console.error('Sign out error:', err);
+      setError('Failed to sign out');
+    } finally {
+      setLoading(false);
+    }
+  }, []);
 
   const value: AuthContextType = {
     user,

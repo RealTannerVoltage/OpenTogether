@@ -16,7 +16,8 @@
     ],
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.opentogether.app"
+      "bundleIdentifier": "com.opentogether.app",
+      "schemes": ["opentogether"]
     },
     "android": {
       "adaptiveIcon": {
@@ -26,13 +27,23 @@
       "package": "com.opentogether.app",
       "permissions": [
         "INTERNET"
+      ],
+      "intentFilters": [
+        {
+          "action": "VIEW",
+          "data": [
+            {
+              "scheme": "opentogether",
+              "host": "auth",
+              "pathPrefix": "/"
+            }
+          ],
+          "category": ["BROWSABLE", "DEFAULT"]
+        }
       ]
     },
     "web": {
       "favicon": "./assets/favicon.png"
-    },
-    "plugins": [
-      "expo-auth-session"
-    ]
+    }
   }
 }

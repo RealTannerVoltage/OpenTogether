@@ -1,4 +1,5 @@
 import { Server, User } from '../types';
+import { minecraftAuth } from './minecraftAuth';
 import { API_BASE_URL } from '../config/auth';
 
 export interface ApiResponse<T> {
@@ -7,9 +8,22 @@ export interface ApiResponse<T> {
   error?: string;
 }
 
+const getMinecraftToken = async (): Promise<string | null> => {
+  const token = minecraftAuth.getMinecraftToken();
+  if (!token) {
+    const refreshed = await minecraftAuth.refreshTokens();
+    if (refreshed) {
+      return minecraftAuth.getMinecraftToken();
+    }
+  }
+  return token;
+};
+
 const apiClient = {
-  async get<T>(endpoint: string, token?: string): Promise<ApiResponse<T>> {
+  async get<T>(endpoint: string): Promise<ApiResponse<T>> {
     try {
+      const token = await getMinecraftToken();
+      
       const headers: Record<string, string> = {
         'Content-Type': 'application/json',
       };
@@ -43,8 +57,10 @@ const apiClient = {
     }
   },
 
-  async post<T>(endpoint: string, body: any, token?: string): Promise<ApiResponse<T>> {
+  async post<T>(endpoint: string, body: any): Promise<ApiResponse<T>> {
     try {
+      const token = await getMinecraftToken();
+      
       const headers: Record<string, string> = {
         'Content-Type': 'application/json',
       };
@@ -82,31 +98,31 @@ const apiClient = {
 
 // Server endpoints
 export const ServerApi = {
-  async getAll(token?: string): Promise<ApiResponse<Server[]>> {
-    return apiClient.get<Server[]>('/servers', token);
+  async getAll(): Promise<ApiResponse<Server[]>> {
+    return apiClient.get<Server[]>('/servers');
   },
 
-  async getById(id: string, token?: string): Promise<ApiResponse<Server>> {
-    return apiClient.get<Server>(`/servers/${id}`, token);
+  async getById(id: string): Promise<ApiResponse<Server>> {
+    return apiClient.get<Server>(`/servers/${id}`);
   },
 
-  async create(server: Omit<Server, 'id' | 'createdAt'>, token: string): Promise<ApiResponse<Server>> {
-    return apiClient.post<Server>('/servers', server, token);
+  async create(server: Omit<Server, 'id' | 'createdAt'>): Promise<ApiResponse<Server>> {
+    return apiClient.post<Server>('/servers', server);
   },
 
-  async join(serverId: string, user: User, token: string): Promise<ApiResponse<Server>> {
-    return apiClient.post<Server>(`/servers/${serverId}/join`, { user }, token);
+  async join(serverId: string, user: User): Promise<ApiResponse<Server>> {
+    return apiClient.post<Server>(`/servers/${serverId}/join`, { user });
   },
 };
 
 // User endpoints
 export const UserApi = {
-  async linkSwitchAccount(switchFriendCode: string, token: string): Promise<ApiResponse<User>> {
-    return apiClient.post<User>('/users/link-switch', { switchFriendCode }, token);
+  async linkSwitchAccount(switchFriendCode: string): Promise<ApiResponse<User>> {
+    return apiClient.post<User>('/users/link-switch', { switchFriendCode });
   },
 
-  async getProfile(token: string): Promise<ApiResponse<User>> {
-    return apiClient.get<User>('/users/me', token);
+  async getProfile(): Promise<ApiResponse<User>> {
+    return apiClient.get<User>('/users/me');
   },
 };
 

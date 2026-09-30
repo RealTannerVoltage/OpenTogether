@@ -1,7 +1,7 @@
-import { AuthContextType, useAuthContext } from '../contexts/AuthContext';
+import { useAuthContext } from '../contexts/AuthContext';
+import { AuthContextType } from '../contexts/AuthContext';
 
-// Legacy hook - use useAuthContext instead
-// Keeping for backwards compatibility
+// Simple wrapper for backwards compatibility
 export const useAuth = (): AuthContextType => {
   return useAuthContext();
 };
